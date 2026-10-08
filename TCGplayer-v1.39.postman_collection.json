@@ -1,0 +1,3542 @@
+{
+  "info": {
+    "name": "TCGplayer API v1.39.0",
+    "description": "Merged from TCGplayer's per-endpoint OpenAPI definitions at https://docs.tcgplayer.com/reference (retrieved 2026-10-08). Each operation's `x-docs-url` links its source page.\n\n**Access:** TCGplayer states it is no longer granting new API access; existing keys only.\n\n## Additions to the official definitions\n- `servers` adds the `/{version}` prefix shown in the Getting Started guide (`https://api.tcgplayer.com/[VERSION]/catalog/categories`); the reference definitions list only `https://api.tcgplayer.com`.\n- `POST /token` and `securitySchemes` are hand-written from the Getting Started and Store Authorization guides; the reference definitions declare no security.\n- `/token` and `/app/authorize/{authCode}` use the unversioned root, per the guides.\n- Get ProductList By Id / By Key merged into one operation (same URL template).\n\n## Auth flow\n1. `POST /token` with client credentials → bearer token (`Authorization: bearer <token>`).\n2. Store access: store generates an authorization code → `POST /app/authorize/{authCode}` → `AuthorizationKey` (ACCESS_TOKEN). Request a new token via `POST /token` with header `X-Tcg-Access-Token: <ACCESS_TOKEN>`.\n3. `GET /stores/self` with the store-scoped token → store identity / storeKey. (The guide shows this URL without a version prefix; whether it requires one is unverified.)\n\n## Using this collection\nSet `publicKey` and `privateKey`, then send **Authentication → Request a Bearer Token**; its test script saves `bearerToken`. For store-scoped calls, set `accessToken` and `storeKey`, enable the `X-Tcg-Access-Token` header on the token request, and resend it.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{bearerToken}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "https://api.tcgplayer.com"
+    },
+    {
+      "key": "version",
+      "value": "v1.39.0"
+    },
+    {
+      "key": "publicKey",
+      "value": ""
+    },
+    {
+      "key": "privateKey",
+      "value": ""
+    },
+    {
+      "key": "bearerToken",
+      "value": ""
+    },
+    {
+      "key": "accessToken",
+      "value": ""
+    },
+    {
+      "key": "storeKey",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "Authentication",
+      "item": [
+        {
+          "name": "Request a Bearer Token",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Tcg-Access-Token",
+                "value": "{{accessToken}}",
+                "description": "Optional store ACCESS_TOKEN (AuthorizationKey) for store-scoped access.",
+                "disabled": true
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/token",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "token"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "description": "Exchange PUBLIC_KEY / PRIVATE_KEY for a bearer token. To act on a contracted store, also send the store's ACCESS_TOKEN (the `AuthorizationKey` from POST /app/authorize/{authCode}) in the `X-Tcg-Access-Token` header; the returned token is then store-scoped. Tokens are valid until `.expires`; cache and refresh near expiry. Hand-written from the Getting Started and Store Authorization guides (not in TCGplayer's reference definitions).\n\nDocs: https://docs.tcgplayer.com/docs/getting-started",
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "grant_type",
+                  "value": "client_credentials",
+                  "type": "text",
+                  "description": ""
+                },
+                {
+                  "key": "client_id",
+                  "value": "{{publicKey}}",
+                  "type": "text",
+                  "description": "PUBLIC_KEY"
+                },
+                {
+                  "key": "client_secret",
+                  "value": "{{privateKey}}",
+                  "type": "text",
+                  "description": "PRIVATE_KEY"
+                }
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "if (body.access_token) {",
+                  "    pm.collectionVariables.set('bearerToken', body.access_token);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "App",
+      "item": [
+        {
+          "name": "Authorize an Application",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/app/authorize/:authCode",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "app",
+                "authorize",
+                ":authCode"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "key": "authCode",
+                  "value": "",
+                  "description": "Authorization code generated from OAuth."
+                }
+              ]
+            },
+            "description": "Create an application key based on an previously generated\r\nauthorization code.\n\n**Unverified:** Whether this call requires a bearer token. The reference definition declares no security and the 2018 Postman collection sent no Authorization header; this spec inherits the global bearerAuth requirement as an assumption.\n\nDocs: https://docs.tcgplayer.com/reference/app_authorizeapplication"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Catalog",
+      "item": [
+        {
+          "name": "List All Categories",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/{{version}}/catalog/categories",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "{{version}}",
+                "catalog",
+                "categories"
+              ],
+              "query": [
+                {
+                  "key": "offset",
+                  "value": "",
+                  "description": "Used for paging. The number of categories to skip. Default is 0.",
+                  "disabled": true
+                },
+                {
+                  "key": "limit",
+                  "value": "",
+                  "description": "Used for paging. The maximum number of categories to return. Default is 10.",
+                  "disabled": true
+                },
+                {
+                  "key": "sortOrder",
+                  "value": "",
+                  "description": "The name of the property by which to sort the returned categories. If not\r\nspecified, results will be sorted by name.",
+                  "disabled": true
+                },
+                {
+                  "key": "sortDesc",
+                  "value": "",
+                  "description": "If true then sort descending, otherwise sort ascending.",
+                  "disabled": true
+                }
+              ],
+              "variable": []
+            },
+            "description": "This endpoint returns a paged list of all categories supported by TCGplayer.\n\nDocs: https://docs.tcgplayer.com/reference/catalog_getcategories-1"
+          }
+        },
+        {
+          "name": "Get Category Details",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/{{version}}/catalog/categories/:categoryIds",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "{{version}}",
+                "catalog",
+                "categories",
+                ":categoryIds"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "key": "categoryIds",
+                  "value": "",
+                  "description": "A comma delimited list of Ids if the categories to be returned."
+                }
+              ]
+            },
+            "description": "This endpoint returns an array of categories whose Ids were specified in the\r\ncategoryIds parameter.  Categories that could be found are returned in the results\r\narray in the response.  Categories that could not be found are indicated in the\r\nerrors array.\n\nDocs: https://docs.tcgplayer.com/reference/catalog_getcategory-1"
+          }
+        },
+        {
+          "name": "List All Category Conditions",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/{{version}}/catalog/categories/:categoryId/conditions",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "{{version}}",
+                "catalog",
+                "categories",
+                ":categoryId",
+                "conditions"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "key": "categoryId",
+                  "value": "",
+                  "description": "The Id of the category whose conditions should be returned."
+                }
+              ]
+            },
+            "description": "This endpoint returns all available conditions associated with the specified\r\ncategory.\n\nDocs: https://docs.tcgplayer.com/reference/catalog_getcategoryconditions"
+          }
+        },
+        {
+          "name": "List All Category Groups",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/{{version}}/catalog/categories/:categoryId/groups",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "{{version}}",
+                "catalog",
+                "categories",
+                ":categoryId",
+                "groups"
+              ],
+              "query": [
+                {
+                  "key": "offset",
+                  "value": "",
+                  "description": "Used for paging. The number of groups to skip. Default is 0.",
+                  "disabled": true
+                },
+                {
+                  "key": "limit",
+                  "value": "",
+                  "description": "Used for paging. The maximum number of groups to return. Default is 10.",
+                  "disabled": true
+                }
+              ],
+              "variable": [
+                {
+                  "key": "categoryId",
+                  "value": "",
+                  "description": "The Id of the category whose groups should be returned."
+                }
+              ]
+            },
+            "description": "This endpoint returns a paged list of all the groups associated with the specified\r\ncategory.\n\nDocs: https://docs.tcgplayer.com/reference/catalog_getcategorygroups-1"
+          }
+        },
+        {
+          "name": "List All Category Languages",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/{{version}}/catalog/categories/:categoryId/languages",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "{{version}}",
+                "catalog",
+                "categories",
+                ":categoryId",
+                "languages"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "key": "categoryId",
+                  "value": "",
+                  "description": "The Id of the category whose languages should be returned."
+                }
+              ]
+            },
+            "description": "This endpoint returns all available languages associated with the specified category.\n\nDocs: https://docs.tcgplayer.com/reference/catalog_getcategorylanguages"
+          }
+        },
+        {
+          "name": "List All Category Media",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/{{version}}/catalog/categories/:categoryId/media",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "{{version}}",
+                "catalog",
+                "categories",
+                ":categoryId",
+                "media"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "key": "categoryId",
+                  "value": "",
+                  "description": "The Id of the Category whose media should be returned."
+                }
+              ]
+            },
+            "description": "This endpoint returns all available media (e.g. images) associated with the specified\r\ncategory.\n\nDocs: https://docs.tcgplayer.com/reference/catalog_getcategorymedia"
+          }
+        },
+        {
+          "name": "List All Category Printings",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/{{version}}/catalog/categories/:categoryId/printings",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "{{version}}",
+                "catalog",
+                "categories",
+                ":categoryId",
+                "printings"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "key": "categoryId",
+                  "value": "",
+                  "description": "The Id of the category whose printings should be returned."
+                }
+              ]
+            },
+            "description": "This endpoint returns all available printings associated with the specified category.\n\nDocs: https://docs.tcgplayer.com/reference/catalog_getcategoryprintings"
+          }
+        },
+        {
+          "name": "List All Category Rarities",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/{{version}}/catalog/categories/:categoryId/rarities",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "{{version}}",
+                "catalog",
+                "categories",
+                ":categoryId",
+                "rarities"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "key": "categoryId",
+                  "value": "",
+                  "description": "The Id of the category whose rarities should be returned."
+                }
+              ]
+            },
+            "description": "This endpoint returns all available rarities associated with the specified category.\n\nDocs: https://docs.tcgplayer.com/reference/catalog_getcategoryrarities"
+          }
+        },
+        {
+          "name": "Search Category Products",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/{{version}}/catalog/categories/:categoryId/search",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "{{version}}",
+                "catalog",
+                "categories",
+                ":categoryId",
+                "search"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "key": "categoryId",
+                  "value": "",
+                  "description": "The Id of the category to search."
+                }
+              ]
+            },
+            "description": "This endpoint returns an array of product Ids that match the provided search critera.\r\nUse the search manifest from the GET /catalog/categories/{categoryId}/search/manifest\r\nendpoint to build requests to this endpoint.  If an invalid filter name is specified\r\nin the request, it will be ignored.  Use the GET /catalog/products/{productIds}\r\nendpoint to get the details about the returned product Ids.\n\nDocs: https://docs.tcgplayer.com/reference/catalog_searchcategory",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"offset\": 0,\n  \"limit\": 0,\n  \"sort\": \"\",\n  \"includeAggregates\": false,\n  \"filters\": [\n    {\n      \"name\": \"\",\n      \"values\": [\n        \"\"\n      ]\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Get Category Search Manifest",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/{{version}}/catalog/categories/:categoryId/search/manifest",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "{{version}}",
+                "catalog",
+                "categories",
+                ":categoryId",
+                "search",
+                "manifest"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "key": "categoryId",
+                  "value": "",
+                  "description": "The Id of the category whose search manifest should be returned."
+                }
+              ]
+            },
+            "description": "This endpoint returns a search manifest for the specified category.  The search\r\nmanifest describes all of the sorting options and filters that are available for\r\nthis category. Its contents should be used to build requests to the POST\r\n/catalog/categories/{categoryId}/search endpoint.\n\nDocs: https://docs.tcgplayer.com/reference/catalog_getcategorysearchmanifest"
+          }
+        },
+        {
+          "name": "List Conditions",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/{{version}}/catalog/conditions",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "{{version}}",
+                "catalog",
+                "conditions"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "description": "This endpoint returns an array contain all of the normalized conditions\r\nsupported by TCGplayer, e.g. Near Mint, Lightly Played.\n\nDocs: https://docs.tcgplayer.com/reference/catalog_getconditions"
+          }
+        },
+        {
+          "name": "List All Groups Details",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/{{version}}/catalog/groups",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "{{version}}",
+                "catalog",
+                "groups"
+              ],
+              "query": [
+                {
+                  "key": "categoryId",
+                  "value": "",
+                  "description": "If specified, only return groups from this category.",
+                  "disabled": true
+                },
+                {
+                  "key": "categoryName",
+                  "value": "",
+                  "description": "If specified, only return groups from categories with this exact name.",
+                  "disabled": true
+                },
+                {
+                  "key": "isSupplemental",
+                  "value": "",
+                  "description": "If true, only return supplemental groups.  If false, return only non-supplemental\r\ngroups. Otherwise, return all groups regardless of whether they are supplemental or\r\nnot.",
+                  "disabled": true
+                },
+                {
+                  "key": "hasSealed",
+                  "value": "",
+                  "description": "If true, only return groups that contain sealed product.  If false, only return\r\ngroups that do not contain sealed product.  Otherwise, return all groups regardless\r\nof whether they have sealed product or not.",
+                  "disabled": true
+                },
+                {
+                  "key": "sortOrder",
+                  "value": "",
+                  "description": "The name of the property to sort the returned groups by. Default is GroupName.",
+                  "disabled": true
+                },
+                {
+                  "key": "sortDesc",
+                  "value": "",
+                  "description": "If true then sort descending, otherwise sort ascending.",
+                  "disabled": true
+                },
+                {
+                  "key": "offset",
+                  "value": "",
+                  "description": "Used for paging. The number of groups to skip. Default is 0.",
+                  "disabled": true
+                },
+                {
+                  "key": "limit",
+                  "value": "",
+                  "description": "Used for paging. The maximum number of groups to return. Default is 10.",
+                  "disabled": true
+                }
+              ],
+              "variable": []
+            },
+            "description": "This endpoint returns all groups that match the specified criteria.\n\nDocs: https://docs.tcgplayer.com/reference/catalog_getgroups-1"
+          }
+        },
+        {
+          "name": "Get Group Details",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/{{version}}/catalog/groups/:groupIds",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "{{version}}",
+                "catalog",
+                "groups",
+                ":groupIds"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "key": "groupIds",
+                  "value": "",
+                  "description": "A comma delimited list of Ids for the groups to return."
+                }
+              ]
+            },
+            "description": "This endpoint returns an array of groups whose Ids were specified in the groupIds\r\nparameter.  Groups that could be found are returned in the results array in the\r\nresponse.  Groups that could not be found are indicated in the errors array.\n\nDocs: https://docs.tcgplayer.com/reference/catalog_getgroup-1"
+          }
+        },
+        {
+          "name": "List All Group Media",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/{{version}}/catalog/groups/:groupId/media",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "{{version}}",
+                "catalog",
+                "groups",
+                ":groupId",
+                "media"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "key": "groupId",
+                  "value": "",
+                  "description": "The Id of the group whose media should be returned."
+                }
+              ]
+            },
+            "description": "This endpoint returns all available media (e.g. images) associated with the\r\nspecified group.\n\nDocs: https://docs.tcgplayer.com/reference/catalog_getgroupmedia"
+          }
+        },
+        {
+          "name": "List All Products",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/{{version}}/catalog/products",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "{{version}}",
+                "catalog",
+                "products"
+              ],
+              "query": [
+                {
+                  "key": "categoryId",
+                  "value": "",
+                  "description": "If specified, only return products in this category.",
+                  "disabled": true
+                },
+                {
+                  "key": "categoryName",
+                  "value": "",
+                  "description": "If specified, only return products in this category.",
+                  "disabled": true
+                },
+                {
+                  "key": "groupId",
+                  "value": "",
+                  "description": "If specified, only return products in this group.",
+                  "disabled": true
+                },
+                {
+                  "key": "groupName",
+                  "value": "",
+                  "description": "If specified, only return products in this group.",
+                  "disabled": true
+                },
+                {
+                  "key": "productName",
+                  "value": "",
+                  "description": "If specified, only return products with this exact name.",
+                  "disabled": true
+                },
+                {
+                  "key": "getExtendedFields",
+                  "value": "",
+                  "description": "If true, include additional category-specific information about each product, otherwise\r\nonly return general product. Default is false.",
+                  "disabled": true
+                },
+                {
+                  "key": "productTypes",
+                  "value": "",
+                  "description": "A comma-separated list of Product Types. If specified, only return Products that\r\nbelong to one of the Product Types in the list. Some valid values: Cards, Booster Pack,\r\nBooster Box.",
+                  "disabled": true
+                },
+                {
+                  "key": "offset",
+                  "value": "",
+                  "description": "Used for paging. The number of Products to skip. Default is 0.",
+                  "disabled": true
+                },
+                {
+                  "key": "limit",
+                  "value": "",
+                  "description": "Used for paging. The maximum number of Products to return. Default is 10.",
+                  "disabled": true
+                },
+                {
+                  "key": "includeSkus",
+                  "value": "",
+                  "description": "If true, include SKU details for each product.  Default is false.",
+                  "disabled": true
+                }
+              ],
+              "variable": []
+            },
+            "description": "This endpoint returns all products that match the specified criteria.\n\nDocs: https://docs.tcgplayer.com/reference/catalog_getproducts-1"
+          }
+        },
+        {
+          "name": "Get Product Details By GTIN",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/{{version}}/catalog/products/gtin/:gtin",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "{{version}}",
+                "catalog",
+                "products",
+                "gtin",
+                ":gtin"
+              ],
+              "query": [
+                {
+                  "key": "getExtendedFields",
+                  "value": "",
+                  "description": "If true, include additional category-specific information about the Product,\r\notherwise only return general product information. Default is false.",
+                  "disabled": true
+                },
+                {
+                  "key": "includeSkus",
+                  "value": "",
+                  "description": "If true, include SKU details for the Product.  Default is false.",
+                  "disabled": true
+                }
+              ],
+              "variable": [
+                {
+                  "key": "gtin",
+                  "value": "",
+                  "description": "A product code from the GTIN family of codes for Product to be returned."
+                }
+              ]
+            },
+            "description": "This endpoint returns a Product's details using a code from the GTIN family of\r\nproduct codes. NOTE: Not all products will have a GTIN.\n\nDocs: https://docs.tcgplayer.com/reference/catalog_getproductbygtin-1"
+          }
+        },
+        {
+          "name": "Get Product Details",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/{{version}}/catalog/products/:productIds",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "{{version}}",
+                "catalog",
+                "products",
+                ":productIds"
+              ],
+              "query": [
+                {
+                  "key": "getExtendedFields",
+                  "value": "",
+                  "description": "If true, include additional Category-specific information about each Product, otherwise\r\nonly return general Product information. Default is false.",
+                  "disabled": true
+                },
+                {
+                  "key": "includeSkus",
+                  "value": "",
+                  "description": "If true, include SKU details for each product.  Default is false.",
+                  "disabled": true
+                }
+              ],
+              "variable": [
+                {
+                  "key": "productIds",
+                  "value": "",
+                  "description": "A comma delimited list of Ids for the products to return."
+                }
+              ]
+            },
+            "description": "This endpoint returns an array of products whose Ids were specified in the productIds\r\nparameter.  Products that could be found are returned in the results array in the\r\nresponse.  Products that could not be found are indicated in the errors array.\n\nDocs: https://docs.tcgplayer.com/reference/catalog_getproduct-1"
+          }
+        },
+        {
+          "name": "List All Product Media Types",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/{{version}}/catalog/products/:productId/media",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "{{version}}",
+                "catalog",
+                "products",
+                ":productId",
+                "media"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "key": "productId",
+                  "value": "",
+                  "description": "The Id of the product whose media should be returned."
+                }
+              ]
+            },
+            "description": "Returns all available media (e.g. images) associated with the specified product.\n\nDocs: https://docs.tcgplayer.com/reference/catalog_getproductmedia"
+          }
+        },
+        {
+          "name": "List Related Products",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/{{version}}/catalog/products/:productId/productsalsopurchased",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "{{version}}",
+                "catalog",
+                "products",
+                ":productId",
+                "productsalsopurchased"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "",
+                  "description": "If specified, the maximum number of related products to be returned. Default is 10.",
+                  "disabled": true
+                },
+                {
+                  "key": "offset",
+                  "value": "",
+                  "description": "Used for paging. The number of categories to skip. Default is 0.",
+                  "disabled": true
+                }
+              ],
+              "variable": [
+                {
+                  "key": "productId",
+                  "value": "",
+                  "description": "The Id of the anchor product."
+                }
+              ]
+            },
+            "description": "Returns other products that are commonly found in the same orders as the specified\r\nanchor product.\n\nDocs: https://docs.tcgplayer.com/reference/catalog_getproductsalsopurchasedbyproductid-1"
+          }
+        },
+        {
+          "name": "List Product SKUs",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/{{version}}/catalog/products/:productId/skus",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "{{version}}",
+                "catalog",
+                "products",
+                ":productId",
+                "skus"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "key": "productId",
+                  "value": "",
+                  "description": "The Id of the product."
+                }
+              ]
+            },
+            "description": "This endpoint returns all of the available SKUs for the specified product.\n\nDocs: https://docs.tcgplayer.com/reference/catalog_getskusbyproductid"
+          }
+        },
+        {
+          "name": "Get SKU details",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/{{version}}/catalog/skus/:skuIds",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "{{version}}",
+                "catalog",
+                "skus",
+                ":skuIds"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "key": "skuIds",
+                  "value": "",
+                  "description": "A comma-delimited list of Ids for the SKUs to be returned."
+                }
+              ]
+            },
+            "description": "This endpoint returns an array of SKUs whose Ids were specified in the skuIds\r\nparameter.  SKUs that could be found are returned in the results array in the\r\nresponse.  SKUs that could not be found are indicated in the errors array.\n\nDocs: https://docs.tcgplayer.com/reference/catalog_getskus"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Inventory",
+      "item": [
+        {
+          "name": "Create ProductList",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/{{version}}/inventory/productLists",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "{{version}}",
+                "inventory",
+                "productLists"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "description": "\n\nDocs: https://docs.tcgplayer.com/reference/inventory_createproductlist-1",
+            "body": {
+              "mode": "raw",
+              "raw": "[\n  {\n    \"quantity\": 0,\n    \"productConditionId\": 0\n  }\n]",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "List All ProductLists",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/{{version}}/inventory/productLists",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "{{version}}",
+                "inventory",
+                "productLists"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "description": "This lists all the accessible ProductLists to the user identified in the bearer token making the API call.\n\nDocs: https://docs.tcgplayer.com/reference/inventory_getproductlist-1"
+          }
+        },
+        {
+          "name": "Get ProductList By Id or Key",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/{{version}}/inventory/productlists/:productListIdOrKey",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "{{version}}",
+                "inventory",
+                "productlists",
+                ":productListIdOrKey"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "key": "productListIdOrKey",
+                  "value": "",
+                  "description": "ProductListId (integer) or ProductListKey (uuid)."
+                }
+              ]
+            },
+            "description": "Returns the ProductList specified by its ProductListId (int64) or ProductListKey (uuid). TCGplayer documents these as two operations (Inventory_GetProductListById, Inventory_GetProductListByKey) on the same URL template; merged here so the spec is valid.\n\nDocs: https://docs.tcgplayer.com/reference/inventory_getproductlistbyid-1, https://docs.tcgplayer.com/reference/inventory_getproductlistbykey-1"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Pricing",
+      "item": [
+        {
+          "name": "List Product Buylist Prices by Group",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/{{version}}/pricing/buy/group/:groupId",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "{{version}}",
+                "pricing",
+                "buy",
+                "group",
+                ":groupId"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "key": "groupId",
+                  "value": "",
+                  "description": "Id of the group to return product buylist prices for."
+                }
+              ]
+            },
+            "description": "Returns all product buylist prices associated with the specified Group.\n\nDocs: https://docs.tcgplayer.com/reference/pricing_getgroupbuylistprices"
+          }
+        },
+        {
+          "name": "List Product Buylist Prices",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/{{version}}/pricing/buy/product/:productIds",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "{{version}}",
+                "pricing",
+                "buy",
+                "product",
+                ":productIds"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "key": "productIds",
+                  "value": "",
+                  "description": "A comma delimited list of Ids for the Products being queried."
+                }
+              ]
+            },
+            "description": "Returns all product buylist prices for the Ids specified.  Buylist prices that could\r\nbe found are returned in the results array in the response.  Buylist prices that\r\ncould not be found are indicated in the errors array.\n\nDocs: https://docs.tcgplayer.com/reference/pricing_getproductbuylistprices-1"
+          }
+        },
+        {
+          "name": "List SKU Buylist Prices",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/{{version}}/pricing/buy/sku/:skuIds",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "{{version}}",
+                "pricing",
+                "buy",
+                "sku",
+                ":skuIds"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "key": "skuIds",
+                  "value": "",
+                  "description": "A comma delimited list of Ids for the SKUs being queried."
+                }
+              ]
+            },
+            "description": "Returns all SKU buylist prices for the Ids specified.  Buylist prices that could\r\nbe found are returned in the results array in the response.  Buylist prices that\r\ncould not be found are indicated in the errors array.\n\nDocs: https://docs.tcgplayer.com/reference/pricing_getproductconditionbuylistprices-1"
+          }
+        },
+        {
+          "name": "List Product Prices by Group",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/{{version}}/pricing/group/:groupId",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "{{version}}",
+                "pricing",
+                "group",
+                ":groupId"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "key": "groupId",
+                  "value": "",
+                  "description": "Id of the group to return product prices for."
+                }
+              ]
+            },
+            "description": "Returns all product prices associated with the specified Group.\n\nDocs: https://docs.tcgplayer.com/reference/pricing_getgroupprices"
+          }
+        },
+        {
+          "name": "Get Market Price by SKU",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/{{version}}/pricing/marketprices/:productconditionId",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "{{version}}",
+                "pricing",
+                "marketprices",
+                ":productconditionId"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "key": "productconditionId",
+                  "value": "",
+                  "description": "The Id of the SKU being queried."
+                }
+              ]
+            },
+            "description": "Gets the current Market Price for the specified SKU.\n\nDocs: https://docs.tcgplayer.com/reference/pricing_getmarketpricebyproductconditionid-1"
+          }
+        },
+        {
+          "name": "List Product Market Prices",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/{{version}}/pricing/product/:productIds",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "{{version}}",
+                "pricing",
+                "product",
+                ":productIds"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "key": "productIds",
+                  "value": "",
+                  "description": "A comma delimited list of Ids for the Products being queried."
+                }
+              ]
+            },
+            "description": "Returns all product market prices for the Ids specified.  Market prices that could\r\nbe found are returned in the results array in the response.  Market prices that\r\ncould not be found are indicated in the errors array.\n\nDocs: https://docs.tcgplayer.com/reference/pricing_getproductprices-1"
+          }
+        },
+        {
+          "name": "List SKU Market Prices",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/{{version}}/pricing/sku/:skuIds",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "{{version}}",
+                "pricing",
+                "sku",
+                ":skuIds"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "key": "skuIds",
+                  "value": "",
+                  "description": "A comma delimited list of Ids for the SKUs being queried."
+                }
+              ]
+            },
+            "description": "Returns all SKU market prices for the Ids specified.  Market prices that could\r\nbe found are returned in the results array in the response.  Market prices that\r\ncould not be found are indicated in the errors array.\n\nDocs: https://docs.tcgplayer.com/reference/pricing_getproductconditionprices-1"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Stores",
+      "item": [
+        {
+          "name": "Search Stores",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/{{version}}/stores",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "{{version}}",
+                "stores"
+              ],
+              "query": [
+                {
+                  "key": "name",
+                  "value": "",
+                  "description": "Optional filter to search by store name.",
+                  "disabled": true
+                },
+                {
+                  "key": "address",
+                  "value": "",
+                  "description": "Optional filter to search by store address.",
+                  "disabled": true
+                },
+                {
+                  "key": "city",
+                  "value": "",
+                  "description": "Optional filter to search by store city.",
+                  "disabled": true
+                },
+                {
+                  "key": "state",
+                  "value": "",
+                  "description": "Optional filter to search by store state.",
+                  "disabled": true
+                },
+                {
+                  "key": "zipCode",
+                  "value": "",
+                  "description": "Optional filter to search by store ZIP/Postal code.",
+                  "disabled": true
+                },
+                {
+                  "key": "sort",
+                  "value": "",
+                  "description": "If specified, sort the results by this value. Default is \"Name ASC\".",
+                  "disabled": true
+                },
+                {
+                  "key": "offset",
+                  "value": "",
+                  "description": "Used for paging. The number of records to skip. Default is 0.",
+                  "disabled": true
+                },
+                {
+                  "key": "limit",
+                  "value": "",
+                  "description": "Used for paging. The maximum number of records to return. Default is 10.",
+                  "disabled": true
+                }
+              ],
+              "variable": []
+            },
+            "description": "Returns a collection of storeKey values based on the search parameters.\n\nDocs: https://docs.tcgplayer.com/reference/stores_getstores-1"
+          }
+        },
+        {
+          "name": "Get Store Info",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/{{version}}/stores/self",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "{{version}}",
+                "stores",
+                "self"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "description": "Return general information about the current Store associated with the current bearer token.\n\n**Unverified:** Whether this path takes the /{version} prefix. The Store Authorization guide shows https://api.tcgplayer.com/stores/self with no version; this spec uses the default versioned server as an assumption.\n\nDocs: https://docs.tcgplayer.com/reference/stores_getidentity-1"
+          }
+        },
+        {
+          "name": "Get Store Info",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/{{version}}/stores/:storeKeys",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "{{version}}",
+                "stores",
+                ":storeKeys"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "key": "storeKeys",
+                  "value": "",
+                  "description": "Required. A list of unique keys used to identify the stores being queried."
+                }
+              ]
+            },
+            "description": "Return general information about the stores specified by the store keys.\n\nDocs: https://docs.tcgplayer.com/reference/stores_getstoresbystorekey-1"
+          }
+        },
+        {
+          "name": "Get Store Address",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/{{version}}/stores/:storeKey/address",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "{{version}}",
+                "stores",
+                ":storeKey",
+                "address"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "key": "storeKey",
+                  "value": "{{storeKey}}",
+                  "description": "Required. A unique key used to identify the Store being queried."
+                }
+              ]
+            },
+            "description": "Return address information about the Store specified by the storeKey.\n\nDocs: https://docs.tcgplayer.com/reference/stores_getstoreaddress-1"
+          }
+        },
+        {
+          "name": "Get Buylist Categories",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/{{version}}/stores/:storeKey/buylist/categories",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "{{version}}",
+                "stores",
+                ":storeKey",
+                "buylist",
+                "categories"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "key": "storeKey",
+                  "value": "{{storeKey}}",
+                  "description": "Required. A unique key used to identify the caller of the API."
+                }
+              ]
+            },
+            "description": "\n\nDocs: https://docs.tcgplayer.com/reference/stores_getsellerbuylistcategories"
+          }
+        },
+        {
+          "name": "Get Buylist Groups",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/{{version}}/stores/:storeKey/buylist/groups",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "{{version}}",
+                "stores",
+                ":storeKey",
+                "buylist",
+                "groups"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "key": "storeKey",
+                  "value": "{{storeKey}}",
+                  "description": "Required. A unique key used to identify the caller of the API."
+                }
+              ]
+            },
+            "description": "\n\nDocs: https://docs.tcgplayer.com/reference/stores_getsellerbuylistsets"
+          }
+        },
+        {
+          "name": "Get a Store's Buylist Products for Kiosk use.",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/{{version}}/stores/:storeKey/buylist/products",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "{{version}}",
+                "stores",
+                ":storeKey",
+                "buylist",
+                "products"
+              ],
+              "query": [
+                {
+                  "key": "searchTerm",
+                  "value": "",
+                  "description": "The term which must be contained in either the Product Name or Set Name of the Products.",
+                  "disabled": true
+                },
+                {
+                  "key": "offset",
+                  "value": "",
+                  "description": "The number of Products to skip in the initial result set.",
+                  "disabled": true
+                },
+                {
+                  "key": "limit",
+                  "value": "",
+                  "description": "The maximum number of Products to be returned.",
+                  "disabled": true
+                },
+                {
+                  "key": "sortDirection",
+                  "value": "",
+                  "description": "The direction of the sort to be applied to the initial result set. Products are sorted by Product Name then Set Name. Options are ASC or DESC. Defaults to ASC.",
+                  "disabled": true
+                },
+                {
+                  "key": "categoryId",
+                  "value": "",
+                  "description": "If provided will only return Buylist Products in the Category.",
+                  "disabled": true
+                }
+              ],
+              "variable": [
+                {
+                  "key": "storeKey",
+                  "value": "{{storeKey}}",
+                  "description": "Required. A unique key used to identify the caller of the API."
+                }
+              ]
+            },
+            "description": "\n\nDocs: https://docs.tcgplayer.com/reference/stores_getbuylistproducts"
+          }
+        },
+        {
+          "name": "Get Store Buylist Settings",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/{{version}}/stores/:storeKey/buylist/settings",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "{{version}}",
+                "stores",
+                ":storeKey",
+                "buylist",
+                "settings"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "key": "storeKey",
+                  "value": "{{storeKey}}",
+                  "description": "Required. A unique key used to identify the caller of the API."
+                }
+              ]
+            },
+            "description": "\n\nDocs: https://docs.tcgplayer.com/reference/stores_getsellerbuylistsettings"
+          }
+        },
+        {
+          "name": "Batch Update Store Buylist Prices",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/{{version}}/stores/:storeKey/buylist/skus/batch",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "{{version}}",
+                "stores",
+                ":storeKey",
+                "buylist",
+                "skus",
+                "batch"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "key": "storeKey",
+                  "value": "{{storeKey}}",
+                  "description": "Required. A unique key used to identify the caller of the API."
+                }
+              ]
+            },
+            "description": "Perform multiple buylist updates asynchronously in a batch.  The response will\r\ncontain a single GUID to identify the batch.  All buylist updates are applied\r\nto the buylist of the seller indicated by the bearer token used to make this\r\nrequest. When the batch has been processed, a message will be sent to your\r\napplication's web hook containing the GUID from this response.\n\nDocs: https://docs.tcgplayer.com/reference/stores_batchupdatestorebuylistprices",
+            "body": {
+              "mode": "raw",
+              "raw": "[\n  {\n    \"skuId\": 0,\n    \"price\": 0\n  }\n]",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Create SKU Buylist",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/{{version}}/stores/:storeKey/buylist/skus/:skuId",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "{{version}}",
+                "stores",
+                ":storeKey",
+                "buylist",
+                "skus",
+                ":skuId"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "key": "storeKey",
+                  "value": "{{storeKey}}",
+                  "description": "Required. A unique key used to identify the caller of the API."
+                },
+                {
+                  "key": "skuId",
+                  "value": "",
+                  "description": "Required. The Id of the SKU to create in the Store's Buylist."
+                }
+              ]
+            },
+            "description": "\n\nDocs: https://docs.tcgplayer.com/reference/stores_createstorebuylistsku-1",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"price\": 0,\n  \"quantity\": 0\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Update SKU Buylist Price",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/{{version}}/stores/:storeKey/buylist/skus/:skuId/price",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "{{version}}",
+                "stores",
+                ":storeKey",
+                "buylist",
+                "skus",
+                ":skuId",
+                "price"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "key": "storeKey",
+                  "value": "{{storeKey}}",
+                  "description": "Required. A unique key used to identify the caller of the API."
+                },
+                {
+                  "key": "skuId",
+                  "value": "",
+                  "description": "Required. The Id of the SKU to update."
+                }
+              ]
+            },
+            "description": "\n\nDocs: https://docs.tcgplayer.com/reference/stores_updatestorebuylistskuprice-1",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"skuId\": 0,\n  \"price\": 0\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Update SKU Buylist Quantity",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/{{version}}/stores/:storeKey/buylist/skus/:skuId/quantity",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "{{version}}",
+                "stores",
+                ":storeKey",
+                "buylist",
+                "skus",
+                ":skuId",
+                "quantity"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "key": "storeKey",
+                  "value": "{{storeKey}}",
+                  "description": "Required. A unique key used to identify the caller of the API."
+                },
+                {
+                  "key": "skuId",
+                  "value": "",
+                  "description": "Required. The Id of the SKU to update."
+                }
+              ]
+            },
+            "description": "\n\nDocs: https://docs.tcgplayer.com/reference/stores_updatestorebuylistskuquantity-1",
+            "body": {
+              "mode": "raw",
+              "raw": "0",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Get the Product Conditions for a Product on a Store's Buylist.",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/{{version}}/stores/:storeKey/buylist/:productId",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "{{version}}",
+                "stores",
+                ":storeKey",
+                "buylist",
+                ":productId"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "key": "storeKey",
+                  "value": "{{storeKey}}",
+                  "description": "Required. A unique key used to identify the caller of the API."
+                },
+                {
+                  "key": "productId",
+                  "value": "",
+                  "description": "Required. The ProductId to get Product Conditions for."
+                }
+              ]
+            },
+            "description": "\n\nDocs: https://docs.tcgplayer.com/reference/stores_getbuylistproductconditions"
+          }
+        },
+        {
+          "name": "Search Store Customers",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/{{version}}/stores/:storeKey/customers",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "{{version}}",
+                "stores",
+                ":storeKey",
+                "customers"
+              ],
+              "query": [
+                {
+                  "key": "name",
+                  "value": "",
+                  "description": "A string of characters representing the first name and/or last name of the customer being searched for. Use format \"firstName,lastName\"",
+                  "disabled": true
+                },
+                {
+                  "key": "email",
+                  "value": "",
+                  "description": "The email of the customer.",
+                  "disabled": true
+                },
+                {
+                  "key": "offset",
+                  "value": "",
+                  "description": "Used for paging. The number of records to skip. Default is 0.",
+                  "disabled": true
+                },
+                {
+                  "key": "limit",
+                  "value": "",
+                  "description": "Used for paging. The maximum number of records to return. Default is 10.",
+                  "disabled": true
+                }
+              ],
+              "variable": [
+                {
+                  "key": "storeKey",
+                  "value": "{{storeKey}}",
+                  "description": "Required. A unique key used to identify the caller of the API."
+                }
+              ]
+            },
+            "description": "Search Store Customers.\n\nDocs: https://docs.tcgplayer.com/reference/stores_getstorecustomers-1"
+          }
+        },
+        {
+          "name": "Get Customer Summary",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/{{version}}/stores/:storeKey/customers/:token",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "{{version}}",
+                "stores",
+                ":storeKey",
+                "customers",
+                ":token"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "key": "storeKey",
+                  "value": "{{storeKey}}",
+                  "description": "Required. A unique key used to identify the caller of the API."
+                },
+                {
+                  "key": "token",
+                  "value": "",
+                  "description": "Required. Represents the unique seller and customer combination."
+                }
+              ]
+            },
+            "description": "Returns the total number of orders and total product dollar amount for all orders a customer has place with the seller.\r\nThe token represents the unique seller and customer combination.\n\nDocs: https://docs.tcgplayer.com/reference/stores_getstorecustomer-1"
+          }
+        },
+        {
+          "name": "Get Customer Addresses",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/{{version}}/stores/:storeKey/customers/:token/addresses",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "{{version}}",
+                "stores",
+                ":storeKey",
+                "customers",
+                ":token",
+                "addresses"
+              ],
+              "query": [
+                {
+                  "key": "offset",
+                  "value": "",
+                  "description": "Used for paging. The number of records to skip. Default is 0.",
+                  "disabled": true
+                },
+                {
+                  "key": "limit",
+                  "value": "",
+                  "description": "Used for paging. The maximum number of records to return. Default is 10.",
+                  "disabled": true
+                }
+              ],
+              "variable": [
+                {
+                  "key": "storeKey",
+                  "value": "{{storeKey}}",
+                  "description": "Required. A unique key used to identify the caller of the API."
+                },
+                {
+                  "key": "token",
+                  "value": "",
+                  "description": "Required. Represents the unique seller and customer combination."
+                }
+              ]
+            },
+            "description": "Returns the shipping addresses associated with the orders a customer has placed with the seller.\r\nThe token represents the unique seller and customer combination.\n\nDocs: https://docs.tcgplayer.com/reference/stores_getstorecustomeraddresses-1"
+          }
+        },
+        {
+          "name": "Get Customer Orders",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/{{version}}/stores/:storeKey/customers/:token/orders",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "{{version}}",
+                "stores",
+                ":storeKey",
+                "customers",
+                ":token",
+                "orders"
+              ],
+              "query": [
+                {
+                  "key": "offset",
+                  "value": "",
+                  "description": "Used for paging. The number of records to skip. Default is 0.",
+                  "disabled": true
+                },
+                {
+                  "key": "limit",
+                  "value": "",
+                  "description": "Used for paging. The maximum number of records to return. Default is 10.",
+                  "disabled": true
+                }
+              ],
+              "variable": [
+                {
+                  "key": "storeKey",
+                  "value": "{{storeKey}}",
+                  "description": "Required. A unique key used to identify the caller of the API."
+                },
+                {
+                  "key": "token",
+                  "value": "",
+                  "description": "Required. Represents the unique seller and customer combination."
+                }
+              ]
+            },
+            "description": "Returns a list of orders containing the total product quantity and total product dollar amount for each order a customer has placed with the seller.\r\nThe token represents the unique seller and customer combination.\n\nDocs: https://docs.tcgplayer.com/reference/stores_getstorecustomerordersummary-1"
+          }
+        },
+        {
+          "name": "Get Store Feedback",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/{{version}}/stores/:storeKey/feedback",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "{{version}}",
+                "stores",
+                ":storeKey",
+                "feedback"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "key": "storeKey",
+                  "value": "{{storeKey}}",
+                  "description": "Required. A unique key used to identify the caller of the API."
+                }
+              ]
+            },
+            "description": "Return feedback information about the Store specified by the storeKey.\n\nDocs: https://docs.tcgplayer.com/reference/stores_getstorefeedback-1"
+          }
+        },
+        {
+          "name": "Get Free Shipping Option",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/{{version}}/stores/:storeKey/freeshipping/settings",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "{{version}}",
+                "stores",
+                ":storeKey",
+                "freeshipping",
+                "settings"
+              ],
+              "query": [
+                {
+                  "key": "offset",
+                  "value": "",
+                  "description": "Used for paging. The number of SellerShippingOptions to skip. Default is 0.",
+                  "disabled": true
+                },
+                {
+                  "key": "limit",
+                  "value": "",
+                  "description": "Used for paging. The maximum number of SellerShippingOptions to return. Default is 10.",
+                  "disabled": true
+                }
+              ],
+              "variable": [
+                {
+                  "key": "storeKey",
+                  "value": "{{storeKey}}",
+                  "description": "Required. A unique key used to identify the caller of the API."
+                }
+              ]
+            },
+            "description": "Gets the current Store's Free Shipping option (if exists) whose Seller is associated with the user's bearer token making this API call.\n\nDocs: https://docs.tcgplayer.com/reference/stores_freeshippingoptions-1"
+          }
+        },
+        {
+          "name": "List All Categories.",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/{{version}}/stores/:storeKey/inventory/categories",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "{{version}}",
+                "stores",
+                ":storeKey",
+                "inventory",
+                "categories"
+              ],
+              "query": [
+                {
+                  "key": "channelId",
+                  "value": "",
+                  "description": "The channel to search for results. Defaults to 0, the TCG Marketplace.",
+                  "disabled": true
+                },
+                {
+                  "key": "includeExcludedCategories",
+                  "value": "",
+                  "description": "If true, will return results for excluded categories. Default is false.",
+                  "disabled": true
+                },
+                {
+                  "key": "offset",
+                  "value": "",
+                  "description": "Used for paging. The number of Categories to skip. Default is 0.",
+                  "disabled": true
+                },
+                {
+                  "key": "limit",
+                  "value": "",
+                  "description": "Used for paging. The maximum number of Categories to return. Default is 10.",
+                  "disabled": true
+                },
+                {
+                  "key": "inStockOnly",
+                  "value": "",
+                  "description": "If true, will return results only for in-stock Categories. Default is true.",
+                  "disabled": true
+                }
+              ],
+              "variable": [
+                {
+                  "key": "storeKey",
+                  "value": "{{storeKey}}",
+                  "description": "Required. A unique key used to identify the caller of the API."
+                }
+              ]
+            },
+            "description": "List All Categories.\n\nDocs: https://docs.tcgplayer.com/reference/stores_getstorecategories"
+          }
+        },
+        {
+          "name": "List Product Summary By Category",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/{{version}}/stores/:storeKey/inventory/categories/:categoryId/search",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "{{version}}",
+                "stores",
+                ":storeKey",
+                "inventory",
+                "categories",
+                ":categoryId",
+                "search"
+              ],
+              "query": [
+                {
+                  "key": "skuLimit",
+                  "value": "",
+                  "description": "The maximum number of SKUs to use in the inventory summary. Default is 3.",
+                  "disabled": true
+                },
+                {
+                  "key": "includeCustom",
+                  "value": "",
+                  "description": "If set to true, custom listings will be returned.  Default is true.",
+                  "disabled": true
+                },
+                {
+                  "key": "includeGeneric",
+                  "value": "",
+                  "description": "If set to true, generic listings will be returned.  Default is true.",
+                  "disabled": true
+                },
+                {
+                  "key": "channelId",
+                  "value": "",
+                  "description": "The channel to search for results. Defaults to 0, the TCG Marketplace.",
+                  "disabled": true
+                },
+                {
+                  "key": "includeExcludedCategories",
+                  "value": "",
+                  "description": "If true, will return results for excluded categories. Default is false.",
+                  "disabled": true
+                }
+              ],
+              "variable": [
+                {
+                  "key": "storeKey",
+                  "value": "{{storeKey}}",
+                  "description": "Required. A unique key used to identify the caller of the API."
+                },
+                {
+                  "key": "categoryId",
+                  "value": "",
+                  "description": "If specified, only return products from this Category."
+                }
+              ]
+            },
+            "description": "List all products based on criteria\n\nDocs: https://docs.tcgplayer.com/reference/stores_productsearchbycategory",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"offset\": 0,\n  \"limit\": 0,\n  \"sort\": \"\",\n  \"includeAggregates\": false,\n  \"filters\": [\n    {\n      \"name\": \"\",\n      \"values\": [\n        \"\"\n      ]\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "List Store Channels",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/{{version}}/stores/:storeKey/inventory/channels",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "{{version}}",
+                "stores",
+                ":storeKey",
+                "inventory",
+                "channels"
+              ],
+              "query": [
+                {
+                  "key": "offset",
+                  "value": "",
+                  "description": "Used for paging. The number of Channels to skip. Default is 0.",
+                  "disabled": true
+                },
+                {
+                  "key": "limit",
+                  "value": "",
+                  "description": "Used for paging. The maximum number of Channels to return. Default is 10.",
+                  "disabled": true
+                }
+              ],
+              "variable": [
+                {
+                  "key": "storeKey",
+                  "value": "{{storeKey}}",
+                  "description": "Required. A unique key used to identify the caller of the API."
+                }
+              ]
+            },
+            "description": "List All Channels for a Store.\n\nDocs: https://docs.tcgplayer.com/reference/stores_getstorechannels"
+          }
+        },
+        {
+          "name": "Search Custom Listings.",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/{{version}}/stores/:storeKey/inventory/customListings?photoId=",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "{{version}}",
+                "stores",
+                ":storeKey",
+                "inventory",
+                "customListings"
+              ],
+              "query": [
+                {
+                  "key": "photoId",
+                  "value": "",
+                  "description": "Required. The unique identifier for any photo associated with the custom listing.",
+                  "disabled": false
+                }
+              ],
+              "variable": [
+                {
+                  "key": "storeKey",
+                  "value": "{{storeKey}}",
+                  "description": "Required. The unique store key used to identify the caller of the API."
+                }
+              ]
+            },
+            "description": "Retrieves the custom listing by the criteria passed in the querystring.\n\nDocs: https://docs.tcgplayer.com/reference/stores_getcustomlisting"
+          }
+        },
+        {
+          "name": "List All Groups",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/{{version}}/stores/:storeKey/inventory/groups",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "{{version}}",
+                "stores",
+                ":storeKey",
+                "inventory",
+                "groups"
+              ],
+              "query": [
+                {
+                  "key": "categoryId",
+                  "value": "",
+                  "description": "If provided, this request will only return groups from the specified category.",
+                  "disabled": true
+                },
+                {
+                  "key": "categoryName",
+                  "value": "",
+                  "description": "If provided, this request will only return groups from the specified category",
+                  "disabled": true
+                },
+                {
+                  "key": "channelId",
+                  "value": "",
+                  "description": "The channel to search for results.  Defaults to 0, the TCG Marketplace.",
+                  "disabled": true
+                },
+                {
+                  "key": "includeExcludedCategories",
+                  "value": "",
+                  "description": "If true, will return results for excluded categories.  Default is false.",
+                  "disabled": true
+                },
+                {
+                  "key": "offset",
+                  "value": "",
+                  "description": "Used for paging. The number of Groups to skip. Default is 0.",
+                  "disabled": true
+                },
+                {
+                  "key": "limit",
+                  "value": "",
+                  "description": "Used for paging. The maximum number of Groups to return. Default is 10.",
+                  "disabled": true
+                },
+                {
+                  "key": "inStockOnly",
+                  "value": "",
+                  "description": "If true, will only return Groups which are in-stock.\r\nIf false, will include Groups which have prices but aren't in stock.\r\nIf null, will use Sellers 'Hide Sets without Inventory' Pro Setting.\r\nDefault is null.",
+                  "disabled": true
+                }
+              ],
+              "variable": [
+                {
+                  "key": "storeKey",
+                  "value": "{{storeKey}}",
+                  "description": "Required. A unique key used to identify the caller of the API."
+                }
+              ]
+            },
+            "description": "This listing comes from the current Store's inventory whose Seller is associated with the user's bearer token making this API call.\n\nDocs: https://docs.tcgplayer.com/reference/stores_getstoregroups-1"
+          }
+        },
+        {
+          "name": "List Product Summary",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/{{version}}/stores/:storeKey/inventory/products",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "{{version}}",
+                "stores",
+                ":storeKey",
+                "inventory",
+                "products"
+              ],
+              "query": [
+                {
+                  "key": "categoryId",
+                  "value": "",
+                  "description": "If specified, only return products from this Category.",
+                  "disabled": true
+                },
+                {
+                  "key": "categoryName",
+                  "value": "",
+                  "description": "If specified, only return products from this Category.",
+                  "disabled": true
+                },
+                {
+                  "key": "groupId",
+                  "value": "",
+                  "description": "If specified, only return products from this Group.",
+                  "disabled": true
+                },
+                {
+                  "key": "groupName",
+                  "value": "",
+                  "description": "If specified, only return products from this Group.",
+                  "disabled": true
+                },
+                {
+                  "key": "productName",
+                  "value": "",
+                  "description": "If specified, only return products with names that contain this string.",
+                  "disabled": true
+                },
+                {
+                  "key": "skuLimit",
+                  "value": "",
+                  "description": "The maximum number of SKUs to use in the inventory summary. Default is 3.",
+                  "disabled": true
+                },
+                {
+                  "key": "sort",
+                  "value": "",
+                  "description": "If specified, sort the results by this value. Default is descending by Price.",
+                  "disabled": true
+                },
+                {
+                  "key": "includeGeneric",
+                  "value": "",
+                  "description": "If set to true, generic listings will be returned.  Default is true.",
+                  "disabled": true
+                },
+                {
+                  "key": "includeCustom",
+                  "value": "",
+                  "description": "If set to true, custom listings will be returned.  Default is true.",
+                  "disabled": true
+                },
+                {
+                  "key": "channelId",
+                  "value": "",
+                  "description": "The channel to search for results.  Defaults to 0, the TCG Marketplace.",
+                  "disabled": true
+                },
+                {
+                  "key": "includeExcludedCategories",
+                  "value": "",
+                  "description": "If true, will return results for excluded categories.  Default is false.",
+                  "disabled": true
+                },
+                {
+                  "key": "offset",
+                  "value": "",
+                  "description": "Used for paging. The number of StoreProducts to skip. Default is 0.",
+                  "disabled": true
+                },
+                {
+                  "key": "limit",
+                  "value": "",
+                  "description": "Used for paging. The maximum number of StoreProducts to return. Default is 10.",
+                  "disabled": true
+                }
+              ],
+              "variable": [
+                {
+                  "key": "storeKey",
+                  "value": "{{storeKey}}",
+                  "description": "Required. A unique key used to identify the caller of the API."
+                }
+              ]
+            },
+            "description": "List Product Summary.\n\nDocs: https://docs.tcgplayer.com/reference/stores_getstoreinventory-1"
+          }
+        },
+        {
+          "name": "Get Product Inventory Quantities",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/{{version}}/stores/:storeKey/inventory/products/:productId/quantity",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "{{version}}",
+                "stores",
+                ":storeKey",
+                "inventory",
+                "products",
+                ":productId",
+                "quantity"
+              ],
+              "query": [
+                {
+                  "key": "includeGeneric",
+                  "value": "",
+                  "description": "If set to true, generic listings will be returned.  Default is true.",
+                  "disabled": true
+                },
+                {
+                  "key": "includeCustom",
+                  "value": "",
+                  "description": "If set to true, custom listings will be returned.  Default is true.",
+                  "disabled": true
+                },
+                {
+                  "key": "channelId",
+                  "value": "",
+                  "description": "The channel to search for results.  Defaults to 0, the TCG Marketplace.",
+                  "disabled": true
+                },
+                {
+                  "key": "includeExcludedCategories",
+                  "value": "",
+                  "description": "If true, will return results for excluded categories.  Default is false.",
+                  "disabled": true
+                }
+              ],
+              "variable": [
+                {
+                  "key": "storeKey",
+                  "value": "{{storeKey}}",
+                  "description": "Required. A unique key used to identify the caller of the API."
+                },
+                {
+                  "key": "productId",
+                  "value": "",
+                  "description": "Required. Identity of the Product being searched for."
+                }
+              ]
+            },
+            "description": "Get Product Inventory Quantities.\n\nDocs: https://docs.tcgplayer.com/reference/stores_getinventoryproductquantity-1"
+          }
+        },
+        {
+          "name": "List Related Products",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/{{version}}/stores/:storeKey/inventory/products/:productId/relatedproducts",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "{{version}}",
+                "stores",
+                ":storeKey",
+                "inventory",
+                "products",
+                ":productId",
+                "relatedproducts"
+              ],
+              "query": [
+                {
+                  "key": "includeGeneric",
+                  "value": "",
+                  "description": "If set to true, generic listings will be returned.  Default is true.",
+                  "disabled": true
+                },
+                {
+                  "key": "includeCustom",
+                  "value": "",
+                  "description": "If set to true, custom listings will be returned.  Default is true.",
+                  "disabled": true
+                },
+                {
+                  "key": "channelId",
+                  "value": "",
+                  "description": "The channel to search for results.  Defaults to 0, the TCG Marketplace.",
+                  "disabled": true
+                },
+                {
+                  "key": "includeExcludedCategories",
+                  "value": "",
+                  "description": "If true, will return results for excluded categories.  Default is false.",
+                  "disabled": true
+                },
+                {
+                  "key": "offset",
+                  "value": "",
+                  "description": "Used for paging. The number of Related Products to skip. Default is 0.",
+                  "disabled": true
+                },
+                {
+                  "key": "limit",
+                  "value": "",
+                  "description": "Used for paging. The maximum number of Related Products to return. Default is 10.",
+                  "disabled": true
+                },
+                {
+                  "key": "myInventoryOnly",
+                  "value": "",
+                  "description": "If true, only return Related Products the seller has in stock.\r\nOtherwise, return all Related Products.  Default is false.",
+                  "disabled": true
+                }
+              ],
+              "variable": [
+                {
+                  "key": "storeKey",
+                  "value": "{{storeKey}}",
+                  "description": "Required. A unique key used to identify the caller of the API."
+                },
+                {
+                  "key": "productId",
+                  "value": "",
+                  "description": "Required. The Id of the Product to get Related Products for."
+                }
+              ]
+            },
+            "description": "Related Products are other Products that are often purchased along with the specified Product.\n\nDocs: https://docs.tcgplayer.com/reference/stores_getrelatedproducts-1"
+          }
+        },
+        {
+          "name": "List Shipping Options",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/{{version}}/stores/:storeKey/inventory/products/:productId/shippingoptions",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "{{version}}",
+                "stores",
+                ":storeKey",
+                "inventory",
+                "products",
+                ":productId",
+                "shippingoptions"
+              ],
+              "query": [
+                {
+                  "key": "username",
+                  "value": "",
+                  "description": "If specified, use this user's shipping country when determining shipping options.",
+                  "disabled": true
+                },
+                {
+                  "key": "countryCode",
+                  "value": "",
+                  "description": "If no username is specified, use this country code when determining shipping options. Default is US.",
+                  "disabled": true
+                },
+                {
+                  "key": "offset",
+                  "value": "",
+                  "description": "Used for paging. The number of SellerShippingOptions to skip. Default is 0.",
+                  "disabled": true
+                },
+                {
+                  "key": "limit",
+                  "value": "",
+                  "description": "Used for paging. The maximum number of SellerShippingOptions to return. Default is 10.",
+                  "disabled": true
+                }
+              ],
+              "variable": [
+                {
+                  "key": "storeKey",
+                  "value": "{{storeKey}}",
+                  "description": "Required. A unique key used to identify the caller of the API."
+                },
+                {
+                  "key": "productId",
+                  "value": "",
+                  "description": "Required. The Id of the Product being queried."
+                }
+              ]
+            },
+            "description": "\n\nDocs: https://docs.tcgplayer.com/reference/stores_shippingoptions-1"
+          }
+        },
+        {
+          "name": "List Product SKUs",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/{{version}}/stores/:storeKey/inventory/products/:productId/skus",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "{{version}}",
+                "stores",
+                ":storeKey",
+                "inventory",
+                "products",
+                ":productId",
+                "skus"
+              ],
+              "query": [
+                {
+                  "key": "includeGeneric",
+                  "value": "",
+                  "description": "If set to true, generic listings will be returned.  Default is true.",
+                  "disabled": true
+                },
+                {
+                  "key": "includeCustom",
+                  "value": "",
+                  "description": "If set to true, custom listings will be returned.  Default is true.",
+                  "disabled": true
+                },
+                {
+                  "key": "offset",
+                  "value": "",
+                  "description": "Used for paging. The number of SKUs to skip. Default is 0.",
+                  "disabled": true
+                },
+                {
+                  "key": "limit",
+                  "value": "",
+                  "description": "Used for paging. The maximum number of SKUs to return. Default is 10.",
+                  "disabled": true
+                },
+                {
+                  "key": "channelId",
+                  "value": "",
+                  "description": "The channel to search for results.  Defaults to 0, the TCG Marketplace.",
+                  "disabled": true
+                },
+                {
+                  "key": "includeExcludedCategories",
+                  "value": "",
+                  "description": "If true, will return results for excluded categories.  Default is false.",
+                  "disabled": true
+                }
+              ],
+              "variable": [
+                {
+                  "key": "storeKey",
+                  "value": "{{storeKey}}",
+                  "description": "Required. A unique key used to identify the caller of the API."
+                },
+                {
+                  "key": "productId",
+                  "value": "",
+                  "description": "Required. The Id of the Product being queried."
+                }
+              ]
+            },
+            "description": "\n\nDocs: https://docs.tcgplayer.com/reference/stores_getstoreproductskus-1"
+          }
+        },
+        {
+          "name": "List Catalog Objects",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/{{version}}/stores/:storeKey/inventory/search?q=",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "{{version}}",
+                "stores",
+                ":storeKey",
+                "inventory",
+                "search"
+              ],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "",
+                  "description": "The string to search for in Product, Category, and Group names.",
+                  "disabled": false
+                },
+                {
+                  "key": "limit",
+                  "value": "",
+                  "description": "Used for paging. The maximum number of SearchResults to return. Default is 10.",
+                  "disabled": true
+                }
+              ],
+              "variable": [
+                {
+                  "key": "storeKey",
+                  "value": "{{storeKey}}",
+                  "description": "Required. A unique key used to identify the caller of the API."
+                }
+              ]
+            },
+            "description": "SearchResults returned can include Product, Groups, and Categories.\n\nDocs: https://docs.tcgplayer.com/reference/stores_searchinventory-1"
+          }
+        },
+        {
+          "name": "List SKU List Price",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/{{version}}/stores/:storeKey/inventory/skuprices",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "{{version}}",
+                "stores",
+                ":storeKey",
+                "inventory",
+                "skuprices"
+              ],
+              "query": [
+                {
+                  "key": "groupId",
+                  "value": "",
+                  "description": "If specified, only return SkuListPrices from this Group.",
+                  "disabled": true
+                },
+                {
+                  "key": "skuId",
+                  "value": "",
+                  "description": "If specified, only return SkuListPrices with this SkuId.",
+                  "disabled": true
+                },
+                {
+                  "key": "includeGeneric",
+                  "value": "",
+                  "description": "If set to true, generic listings will be returned.  Default is true.",
+                  "disabled": true
+                },
+                {
+                  "key": "includeCustom",
+                  "value": "",
+                  "description": "If set to true, custom listings will be returned.  Default is true.",
+                  "disabled": true
+                },
+                {
+                  "key": "channelId",
+                  "value": "",
+                  "description": "The channel to search for results.  Defaults to 0, the TCG Marketplace.",
+                  "disabled": true
+                },
+                {
+                  "key": "includeExcludedCategories",
+                  "value": "",
+                  "description": "If true, will return results for excluded categories.  Default is false.",
+                  "disabled": true
+                },
+                {
+                  "key": "offset",
+                  "value": "",
+                  "description": "Used for paging. The number of SkuListPrices to skip. Default is 0.",
+                  "disabled": true
+                },
+                {
+                  "key": "limit",
+                  "value": "",
+                  "description": "Used for paging. The maximum number of SkuListPrices to return. Default is 10.",
+                  "disabled": true
+                }
+              ],
+              "variable": [
+                {
+                  "key": "storeKey",
+                  "value": "{{storeKey}}",
+                  "description": "Required. A unique key used to identify the caller of the API."
+                }
+              ]
+            },
+            "description": "This listing comes from the current Store's inventory whose Seller is associated with the user's bearer token making this API call.\n\nDocs: https://docs.tcgplayer.com/reference/stores_getinventoryskuprices-1"
+          }
+        },
+        {
+          "name": "Get SKU List Price",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/{{version}}/stores/:storeKey/inventory/skuprices/:skuListPriceId",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "{{version}}",
+                "stores",
+                ":storeKey",
+                "inventory",
+                "skuprices",
+                ":skuListPriceId"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "key": "storeKey",
+                  "value": "{{storeKey}}",
+                  "description": "Required. A unique key used to identify the caller of the API."
+                },
+                {
+                  "key": "skuListPriceId",
+                  "value": "",
+                  "description": "Required. Identifier for the skuListPrice or custom listing being searched for."
+                }
+              ]
+            },
+            "description": "Get SKU List Price.\n\nDocs: https://docs.tcgplayer.com/reference/stores_getinventoryskuprice-1"
+          }
+        },
+        {
+          "name": "Batch Update Store Sku Prices",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/{{version}}/stores/:storeKey/inventory/skus/batch",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "{{version}}",
+                "stores",
+                ":storeKey",
+                "inventory",
+                "skus",
+                "batch"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "key": "storeKey",
+                  "value": "{{storeKey}}",
+                  "description": "Required. A unique key used to identify the caller of the API."
+                }
+              ]
+            },
+            "description": "Perform multiple price updates asynchronously in a batch.  The response will contain a single GUID to identify the batch.  All price updates\r\nare applied to the inventory of the seller indicated by the bearer token used to make this request. When the batch has been processed, a message\r\nwill be sent to your application's web hook containing the GUID from this response.\n\nDocs: https://docs.tcgplayer.com/reference/stores_batchupdatestoreskuprices-1",
+            "body": {
+              "mode": "raw",
+              "raw": "[\n  {\n    \"skuId\": 0,\n    \"price\": 0,\n    \"channelId\": 0\n  }\n]",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Update SKU inventory",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/{{version}}/stores/:storeKey/inventory/skus/:skuId",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "{{version}}",
+                "stores",
+                ":storeKey",
+                "inventory",
+                "skus",
+                ":skuId"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "key": "storeKey",
+                  "value": "{{storeKey}}",
+                  "description": "Required. A unique key used to identify the caller of the API."
+                },
+                {
+                  "key": "skuId",
+                  "value": "",
+                  "description": "Required. The Id of the SKU to register in inventory."
+                }
+              ]
+            },
+            "description": "Adds or updates a SKU to the current Store's inventory whose Seller is associated with the user's bearer token making this API call.\n\nDocs: https://docs.tcgplayer.com/reference/stores_createstoresku-1",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"price\": 0,\n  \"quantity\": 0,\n  \"channelId\": 0\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Update SKU Inventory Price",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/{{version}}/stores/:storeKey/inventory/skus/:skuId/price",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "{{version}}",
+                "stores",
+                ":storeKey",
+                "inventory",
+                "skus",
+                ":skuId",
+                "price"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "key": "storeKey",
+                  "value": "{{storeKey}}",
+                  "description": "Required. A unique key used to identify the caller of the API."
+                },
+                {
+                  "key": "skuId",
+                  "value": "",
+                  "description": "Required. The Id of the SKU to update price for."
+                }
+              ]
+            },
+            "description": "Updates the current store's pricing of this SKU from the current Store's inventory whose Seller is associated with the user's bearer token making this API call.\n\nDocs: https://docs.tcgplayer.com/reference/stores_updatestoreskuprice-1",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"price\": 0,\n  \"channelId\": 0\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Get SKU Quantity",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/{{version}}/stores/:storeKey/inventory/skus/:skuId/quantity",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "{{version}}",
+                "stores",
+                ":storeKey",
+                "inventory",
+                "skus",
+                ":skuId",
+                "quantity"
+              ],
+              "query": [
+                {
+                  "key": "includeGeneric",
+                  "value": "",
+                  "description": "If set to true, generic listings will be returned.  Default is true.",
+                  "disabled": true
+                },
+                {
+                  "key": "includeCustom",
+                  "value": "",
+                  "description": "If set to true, custom listings will be returned.  Default is true.",
+                  "disabled": true
+                },
+                {
+                  "key": "channelId",
+                  "value": "",
+                  "description": "The channel to search for results. Defaults to 0, the TCG Marketplace.",
+                  "disabled": true
+                },
+                {
+                  "key": "includeExcludedCategories",
+                  "value": "",
+                  "description": "If true, will return results for excluded categories. Default is false.",
+                  "disabled": true
+                }
+              ],
+              "variable": [
+                {
+                  "key": "storeKey",
+                  "value": "{{storeKey}}",
+                  "description": "Required. A unique key used to identify the caller of the API."
+                },
+                {
+                  "key": "skuId",
+                  "value": "",
+                  "description": "Required. Identity of the SKU being searched for."
+                }
+              ]
+            },
+            "description": "Get SKU Quantity.\n\nDocs: https://docs.tcgplayer.com/reference/stores_getinventoryskuquantity-1"
+          }
+        },
+        {
+          "name": "Increment SKU Inventory Quantity",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/{{version}}/stores/:storeKey/inventory/skus/:skuId/quantity",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "{{version}}",
+                "stores",
+                ":storeKey",
+                "inventory",
+                "skus",
+                ":skuId",
+                "quantity"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "key": "storeKey",
+                  "value": "{{storeKey}}",
+                  "description": "Required. A unique key used to identify the caller of the API."
+                },
+                {
+                  "key": "skuId",
+                  "value": "",
+                  "description": "Required. The Id of the SKU to update quantity for."
+                }
+              ]
+            },
+            "description": "Increments the current store's inventory of this SKU from the current Store's inventory whose Seller is associated with the user's bearer token making this API call.\n\nDocs: https://docs.tcgplayer.com/reference/stores_updatestoreskuquantity-1",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"quantity\": 0,\n  \"channelId\": 0\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "List Top Sold Products",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/{{version}}/stores/:storeKey/inventory/topsales",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "{{version}}",
+                "stores",
+                ":storeKey",
+                "inventory",
+                "topsales"
+              ],
+              "query": [
+                {
+                  "key": "categoryId",
+                  "value": "",
+                  "description": "If provided, this request will only return products from the specified category.",
+                  "disabled": true
+                },
+                {
+                  "key": "includeGeneric",
+                  "value": "",
+                  "description": "If set to true, generic listings will be returned.  Default is true.",
+                  "disabled": true
+                },
+                {
+                  "key": "includeCustom",
+                  "value": "",
+                  "description": "If set to true, custom listings will be returned.  Default is true.",
+                  "disabled": true
+                },
+                {
+                  "key": "channelId",
+                  "value": "",
+                  "description": "The channel to search for results. Defaults to 0, the TCG Marketplace.",
+                  "disabled": true
+                },
+                {
+                  "key": "includeExcludedCategories",
+                  "value": "",
+                  "description": "If true, will return results for excluded categories. Default is false.",
+                  "disabled": true
+                },
+                {
+                  "key": "offset",
+                  "value": "",
+                  "description": "Used for paging. The number of TopSoldProducts to skip. Default is 0.",
+                  "disabled": true
+                },
+                {
+                  "key": "limit",
+                  "value": "",
+                  "description": "Used for paging. The maximum number of TopSoldProducts to return. Default is 10.",
+                  "disabled": true
+                }
+              ],
+              "variable": [
+                {
+                  "key": "storeKey",
+                  "value": "{{storeKey}}",
+                  "description": "Required. A unique key used to identify the caller of the API."
+                }
+              ]
+            },
+            "description": "This listing comes from the current Store's inventory whose Seller is associated with the user's bearer token making this API call.\n\nDocs: https://docs.tcgplayer.com/reference/stores_gettopsalesforseller-1"
+          }
+        },
+        {
+          "name": "Search Top Sold Products",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/{{version}}/stores/:storeKey/inventory/topsalessearch",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "{{version}}",
+                "stores",
+                ":storeKey",
+                "inventory",
+                "topsalessearch"
+              ],
+              "query": [
+                {
+                  "key": "includeGeneric",
+                  "value": "",
+                  "description": "If set to true, generic listings will be returned.  Default is true.",
+                  "disabled": true
+                },
+                {
+                  "key": "includeCustom",
+                  "value": "",
+                  "description": "If set to true, custom listings will be returned.  Default is true.",
+                  "disabled": true
+                },
+                {
+                  "key": "offset",
+                  "value": "",
+                  "description": "Used for paging. The number of TopSoldProducts to skip. Default is 0.",
+                  "disabled": true
+                },
+                {
+                  "key": "limit",
+                  "value": "",
+                  "description": "Used for paging. The maximum number of TopSoldProducts to return. Default is 10.",
+                  "disabled": true
+                }
+              ],
+              "variable": [
+                {
+                  "key": "storeKey",
+                  "value": "{{storeKey}}",
+                  "description": "Required. A unique key used to identify the caller of the API."
+                }
+              ]
+            },
+            "description": "This listing comes from the current Store's inventory whose Seller is associated with the user's bearer token making this API call.\r\nSimilar to the other Top Sales Search except that you can specify search criteria in the sellerTssc parameter.\n\nDocs: https://docs.tcgplayer.com/reference/stores_topsalessearch-1",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"categories\": [\n    {\n      \"categoryId\": 0,\n      \"name\": \"\",\n      \"modifiedOn\": \"\",\n      \"displayName\": \"\",\n      \"seoCategoryName\": \"\",\n      \"sealedLabel\": \"\",\n      \"nonSealedLabel\": \"\",\n      \"conditionGuideUrl\": \"\",\n      \"isScannable\": false,\n      \"popularity\": 0\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Search Orders",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/{{version}}/stores/:storeKey/orders",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "{{version}}",
+                "stores",
+                ":storeKey",
+                "orders"
+              ],
+              "query": [
+                {
+                  "key": "orderNumber",
+                  "value": "",
+                  "description": "If provided, only return the order for the order number specified.",
+                  "disabled": true
+                },
+                {
+                  "key": "customerName",
+                  "value": "",
+                  "description": "If provided, only return orders where the buyer's name contains the specified string. Format \"Firstname, Lastname\".",
+                  "disabled": true
+                },
+                {
+                  "key": "customerEmail",
+                  "value": "",
+                  "description": "If provided, only return orders where the buyer's email address contains the specified string.",
+                  "disabled": true
+                },
+                {
+                  "key": "minOrderValue",
+                  "value": "",
+                  "description": "If provided, only return orders with ProductAmt &gt;= the specified value.",
+                  "disabled": true
+                },
+                {
+                  "key": "maxOrderValue",
+                  "value": "",
+                  "description": "If provided, only return orders with ProductAmt &lt;= the specified value.",
+                  "disabled": true
+                },
+                {
+                  "key": "channelIds",
+                  "value": "",
+                  "description": "A comma delimited list of order channel Ids. If provided, only return orders from the specified channels.",
+                  "disabled": true
+                },
+                {
+                  "key": "orderStatusIds",
+                  "value": "",
+                  "description": "A comma delimited list of order status Ids. If provided, only return orders in the specified order statuses.",
+                  "disabled": true
+                },
+                {
+                  "key": "pickupStatusIds",
+                  "value": "",
+                  "description": "A comma delimited list of pickup status Ids. If provided, only return orders in the specified pickup statuses.",
+                  "disabled": true
+                },
+                {
+                  "key": "deliveryTypeIds",
+                  "value": "",
+                  "description": "A comma delimited list of deliveryTypeIds. If provided, only return orders in the specified delivery types.",
+                  "disabled": true
+                },
+                {
+                  "key": "presaleStatusIds",
+                  "value": "",
+                  "description": "A comma delimited list of presale status Ids. If provided, only return orders in the specified presale statuses.",
+                  "disabled": true
+                },
+                {
+                  "key": "orderTypeIds",
+                  "value": "",
+                  "description": "A comma delimited list of order type Ids. If provided, only return orders in the specified order types.",
+                  "disabled": true
+                },
+                {
+                  "key": "sort",
+                  "value": "",
+                  "description": "Used for sorting. Default is \"OrderStatus Asc\".  Acceptable sort terms are: OrderNumber, OrderDate, OrderStatus, ShippingName, ProductAmt, ShippingAmt, SellerTaxAmt, OrderAmt",
+                  "disabled": true
+                },
+                {
+                  "key": "offset",
+                  "value": "",
+                  "description": "Used for paging. The number of order numbers to skip. Default is 0.",
+                  "disabled": true
+                },
+                {
+                  "key": "limit",
+                  "value": "",
+                  "description": "Used for paging. The maximum number of order numbers to return. Default is 10.",
+                  "disabled": true
+                }
+              ],
+              "variable": [
+                {
+                  "key": "storeKey",
+                  "value": "{{storeKey}}",
+                  "description": "Required. A unique key used to identify the caller of the API."
+                }
+              ]
+            },
+            "description": "Search Orders.\n\nDocs: https://docs.tcgplayer.com/reference/stores_getstoreorders-1"
+          }
+        },
+        {
+          "name": "Get Order Manifest",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/{{version}}/stores/:storeKey/orders/manifest",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "{{version}}",
+                "stores",
+                ":storeKey",
+                "orders",
+                "manifest"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "key": "storeKey",
+                  "value": "{{storeKey}}",
+                  "description": "Required. A unique key used to identify the caller of the API."
+                }
+              ]
+            },
+            "description": "Get Order Manifest.\n\nDocs: https://docs.tcgplayer.com/reference/stores_getstoreordermanifest-1"
+          }
+        },
+        {
+          "name": "Get Order Details",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/{{version}}/stores/:storeKey/orders/:orderNumbers",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "{{version}}",
+                "stores",
+                ":storeKey",
+                "orders",
+                ":orderNumbers"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "key": "storeKey",
+                  "value": "{{storeKey}}",
+                  "description": "Required. A unique key used to identify the caller of the API."
+                },
+                {
+                  "key": "orderNumbers",
+                  "value": "",
+                  "description": "Required. A comma delimited list of order numbers for the orders being queried."
+                }
+              ]
+            },
+            "description": "Get Order Details.\n\nDocs: https://docs.tcgplayer.com/reference/stores_getstoreordersbyordernumber-1"
+          }
+        },
+        {
+          "name": "Get Order Feedback",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/{{version}}/stores/:storeKey/orders/:orderNumber/feedback",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "{{version}}",
+                "stores",
+                ":storeKey",
+                "orders",
+                ":orderNumber",
+                "feedback"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "key": "storeKey",
+                  "value": "{{storeKey}}",
+                  "description": "Required. A unique key used to identify the caller of the API."
+                },
+                {
+                  "key": "orderNumber",
+                  "value": "",
+                  "description": "Required. The order number associated with the feedback."
+                }
+              ]
+            },
+            "description": "Get Order Feedback.\n\nDocs: https://docs.tcgplayer.com/reference/stores_getstoreorderfeedback-1"
+          }
+        },
+        {
+          "name": "Get Order Items",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/{{version}}/stores/:storeKey/orders/:orderNumber/items",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "{{version}}",
+                "stores",
+                ":storeKey",
+                "orders",
+                ":orderNumber",
+                "items"
+              ],
+              "query": [
+                {
+                  "key": "offset",
+                  "value": "",
+                  "description": "Used for paging. The number of order line items to skip. Default is 0.",
+                  "disabled": true
+                },
+                {
+                  "key": "limit",
+                  "value": "",
+                  "description": "Used for paging. The maximum number of order line items to return. Default is 10.",
+                  "disabled": true
+                },
+                {
+                  "key": "includeItemDetails",
+                  "value": "",
+                  "description": "If set to true, will include details about the products returned. Default is false",
+                  "disabled": true
+                }
+              ],
+              "variable": [
+                {
+                  "key": "storeKey",
+                  "value": "{{storeKey}}",
+                  "description": "Required. A unique key used to identify the caller of the API."
+                },
+                {
+                  "key": "orderNumber",
+                  "value": "",
+                  "description": "Required. The order number for the order being queried."
+                }
+              ]
+            },
+            "description": "Get Order Items.\n\nDocs: https://docs.tcgplayer.com/reference/stores_getstoreorderlineitems-1"
+          }
+        },
+        {
+          "name": "Add Order Tracking Number",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/{{version}}/stores/:storeKey/orders/:orderNumber/tracking",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "{{version}}",
+                "stores",
+                ":storeKey",
+                "orders",
+                ":orderNumber",
+                "tracking"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "key": "storeKey",
+                  "value": "{{storeKey}}",
+                  "description": "Required. A unique key used to identify the caller of the API."
+                },
+                {
+                  "key": "orderNumber",
+                  "value": "",
+                  "description": "Required. The order number for the order being queried."
+                }
+              ]
+            },
+            "description": "Add Order Tracking Number.\n\nDocs: https://docs.tcgplayer.com/reference/stores_createstoreordertracking-1",
+            "body": {
+              "mode": "raw",
+              "raw": "[\n  \"\"\n]",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Get Order Tracking Numbers",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/{{version}}/stores/:storeKey/orders/:orderNumber/tracking",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "{{version}}",
+                "stores",
+                ":storeKey",
+                "orders",
+                ":orderNumber",
+                "tracking"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "key": "storeKey",
+                  "value": "{{storeKey}}",
+                  "description": "Required. A unique key used to identify the caller of the API."
+                },
+                {
+                  "key": "orderNumber",
+                  "value": "",
+                  "description": "Required. The order being queried."
+                }
+              ]
+            },
+            "description": "Get Order Tracking Numbers.\n\nDocs: https://docs.tcgplayer.com/reference/stores_getstoreordertracking-1"
+          }
+        },
+        {
+          "name": "Set Store Status",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/{{version}}/stores/:storeKey/status/:status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "{{version}}",
+                "stores",
+                ":storeKey",
+                "status",
+                ":status"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "key": "storeKey",
+                  "value": "{{storeKey}}",
+                  "description": "Required. A unique key used to identify the caller of the API."
+                },
+                {
+                  "key": "status",
+                  "value": "",
+                  "description": "Required. \"active\" or \"inactive\""
+                }
+              ]
+            },
+            "description": "If a store's status is either Live or Hold - User Request then this action may be called to flip the store between the\r\ntwo.  When the store is Live, it's inventory is visible in the marketplace.  When the store is not Live, it's inventory\r\nis hidden from the marketplace.  Stores may voluntarily hide their inventory by switching their status to Hold - User\r\nRequest.  There are other statuses that TCGplayer can put the store in that wil cause it's inventory to be hidden from\r\nthe marketplace.  Stores cannot put themselves in or take themselves out of these statuses.  Only a TCGplayer admin or\r\ncustomer service rep can interact with stores with these statuses.\n\nDocs: https://docs.tcgplayer.com/reference/stores_setstorestatus-1"
+          }
+        }
+      ]
+    }
+  ]
+}
